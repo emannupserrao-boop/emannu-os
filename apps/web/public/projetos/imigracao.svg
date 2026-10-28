@@ -1,0 +1,12 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <!-- Imigração Portugal: casa com as cores de Portugal. -->
+  <rect width="256" height="256" rx="56" fill="#111827"/>
+  <path d="M0 56 A56 56 0 0 1 56 0 H104 V256 H56 A56 56 0 0 1 0 200 Z" fill="#0f6b3b"/>
+  <path d="M104 0 H200 A56 56 0 0 1 256 56 V200 A56 56 0 0 1 200 256 H104 Z" fill="#c8202f"/>
+  <!-- casa -->
+  <path d="M64 150 L128 96 L192 150 V206 H64 Z" fill="#f6f2e8"/>
+  <path d="M52 154 L128 90 L204 154" stroke="#f6f2e8" stroke-width="14" fill="none" stroke-linejoin="round" stroke-linecap="round"/>
+  <rect x="112" y="162" width="32" height="44" rx="4" fill="#0f6b3b"/>
+  <!-- escudo simplificado no centro do telhado -->
+  <circle cx="128" cy="136" r="14" fill="#ffd34d"/>
+</svg>

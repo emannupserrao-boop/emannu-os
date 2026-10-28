@@ -1,0 +1,25 @@
+{
+  "name": "emannu-os",
+  "version": "3.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "apps/server",
+    "apps/web"
+  ],
+  "scripts": {
+    "start": "node --disable-warning=ExperimentalWarning apps/server/src/index.ts",
+    "dev:server": "node --disable-warning=ExperimentalWarning --watch apps/server/src/index.ts",
+    "dev:web": "npm run dev -w apps/web",
+    "build": "npm run build -w apps/web",
+    "test": "vitest run",
+    "test:e2e": "npm run build && playwright test",
+    "typecheck": "tsc -p apps/server && tsc -p apps/web"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^24.0.0",
+    "typescript": "^5.9.0",
+    "vitest": "^3.2.0"
+  }
+}
