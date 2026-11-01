@@ -2,6 +2,7 @@
 // - 08h00: 3 prioridades do Rocky, ações humanas do dia (aba Hoje, 45 min), prazos e AMARELOS agrupados.
 // - Alertas (uma vez cada): lead ≥85, proposta vencendo, resposta registrada, vaga ≥75,
 //   mudança legal confirmada e grupo pausado.
+import type { GitHubView } from '../../../packages/shared/types.ts';
 import type { Job } from '../../../packages/shared/types.ts';
 import type { JobsResearch, LegalResearch } from '../../../packages/shared/immigration.ts';
 import { jobScore } from '../../../packages/shared/immigration-score.ts';
@@ -98,6 +99,34 @@ export class Alerts {
     }
     this.baseline = false;
     return fired;
+  }
+
+  // CI que falhou na branch principal de um projeto (GitHub, só leitura): um aviso por execução.
+  githubCi(cards: { nome: string; github?: GitHubView[] }[]): string[] {
+    const fired: string[] = [];
+    for (const c of cards) {
+      for (const g of c.github ?? []) {
+        const ci = g.ci;
+        if (g.papel !== 'origem' || !ci || ci.estado !== 'falhou') continue;
+        const k = `ci:${ci.url}`;
+        if (this.once(k, { title: `CI falhou: ${c.nome}`, body: `${ci.nome} na ${ci.branch} (${g.repo}). Abra para ver o motivo.`, url: ci.url, tag: `ci-${g.repo}` })) fired.push(k);
+      }
+    }
+    return fired;
+  }
+
+  // Rotina que confere o GitHub dos projetos a cada 30 min.
+  registerGitHub(r: Routines, cards: () => Promise<{ nome: string; github?: GitHubView[] }[]>): void {
+    r.register({
+      id: 'github-ci',
+      nome: 'CI dos projetos no GitHub',
+      descricao: 'Lê (só leitura) o último CI da branch principal de cada projeto e avisa no celular quando falha',
+      agente: 'sistema',
+      schedule: '*/30 * * * *',
+      fire: async () => {
+        this.githubCi(await cards());
+      },
+    });
   }
 
   wire(): void {

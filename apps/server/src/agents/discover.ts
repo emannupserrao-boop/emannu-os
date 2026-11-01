@@ -13,26 +13,35 @@ export function which(name: string): string | null {
   }
 }
 
+// Agentes instalados pelo npm são scripts do Node (.mjs/.js): rodam com o próprio node do servidor.
+export const isNodeScript = (exe: string): boolean => /\.(mjs|cjs|js)$/i.test(exe);
+export function launch(exe: string, args: string[]): { exe: string; args: string[] } {
+  return isNodeScript(exe) ? { exe: process.execPath, args: [exe, ...args] } : { exe, args };
+}
+
 export function findClaude(): string | null {
   if (process.env.EMANNU_CLAUDE_EXE) return process.env.EMANNU_CLAUDE_EXE;
   const fallback = join(homedir(), '.local', 'bin', 'claude.exe');
   return which('claude') ?? (existsSync(fallback) ? fallback : null);
 }
 
-// O app do Codex instala o CLI numa pasta com hash que muda a cada atualização;
-// pegamos o executável mais recente.
+// Onde o Codex pode estar: um codex.exe no PATH; o app do Codex (pasta com hash que muda a
+// cada atualização, pegamos o mais recente); ou o CLI do npm (codex.js), que o app deixou de
+// trazer na atualização de 28/10/2026. O codex.cmd do npm não roda sem shell: usamos o .js.
 export function findCodex(): string | null {
   if (process.env.EMANNU_CODEX_EXE) return process.env.EMANNU_CODEX_EXE;
-  const found = which('codex');
+  const found = which('codex.exe');
   if (found) return found;
   const base = join(process.env.LOCALAPPDATA || join(homedir(), 'AppData', 'Local'), 'OpenAI', 'Codex', 'bin');
-  if (!existsSync(base)) return null;
-  return (
-    readdirSync(base)
-      .map((d) => join(base, d, 'codex.exe'))
-      .filter((p) => existsSync(p))
-      .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0] ?? null
-  );
+  const app = existsSync(base)
+    ? readdirSync(base)
+        .map((d) => join(base, d, 'codex.exe'))
+        .filter((p) => existsSync(p))
+        .sort((a, b) => statSync(b).mtimeMs - statSync(a).mtimeMs)[0]
+    : undefined;
+  if (app) return app;
+  const npm = join(process.env.APPDATA || join(homedir(), 'AppData', 'Roaming'), 'npm', 'node_modules', '@openai', 'codex', 'bin', 'codex.js');
+  return existsSync(npm) ? npm : null;
 }
 
 export function findAgentExe(agent: RunnableAgent): string | null {
@@ -89,24 +98,29 @@ export async function probeAgent(agent: RunnableAgent): Promise<ProbeResult> {
   if (agent === 'openclaw' || agent === 'hermes') {
     // O Hermes precisa saber onde está a pasta dele (instalado em var\\ferramentas\\hermes).
     const env: Record<string, string> = agent === 'hermes' ? { HERMES_HOME: join(VAR_DIR, 'ferramentas', 'hermes'), PYTHONIOENCODING: 'utf-8' } : {};
-    const v = await run(exe.endsWith('.mjs') ? process.execPath : exe, [...(exe.endsWith('.mjs') ? [exe] : []), '--version'], env);
+    const l = launch(exe, ['--version']);
+    const v = await run(l.exe, l.args, env);
     const version = /(\d{4}\.\d+\.\d+[\w.-]*|\d+\.\d+\.\d+)/.exec(v.out)?.[1] ?? null;
     // OpenClaw usa o login do Claude Code (claude-cli); Hermes, o login do ChatGPT feito nele.
     const authenticated = agent === 'openclaw' ? !!findClaude() : existsSync(join(VAR_DIR, 'ferramentas', 'hermes', 'auth.json'));
     return { installed: true, version, authenticated, exe };
   }
-  const v = await run(exe, ['--version']);
+  const call = (args: string[]) => {
+    const l = launch(exe, args);
+    return run(l.exe, l.args);
+  };
+  const v = await call(['--version']);
   const version = v.out.trim().split(/\r?\n/)[0]?.replace(/^codex-cli\s*/, '').replace(/\s*\(Claude Code\)/, '') || null;
   let authenticated: boolean | null = null;
   if (agent === 'claude') {
-    const a = await run(exe, ['auth', 'status']);
+    const a = await call(['auth', 'status']);
     try {
       authenticated = !!JSON.parse(a.out.slice(a.out.indexOf('{'))).loggedIn;
     } catch {
       authenticated = null;
     }
   } else {
-    const a = await run(exe, ['login', 'status']);
+    const a = await call(['login', 'status']);
     authenticated = /logged in/i.test(a.out) && !/not logged in/i.test(a.out);
   }
   return { installed: true, version, authenticated, exe };

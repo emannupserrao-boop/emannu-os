@@ -18,6 +18,10 @@ const LOGOS: Record<string, string> = {
   'emannu-os': '/icon-192.png',
 };
 
+// Propósito dos projetos que não vieram do cockpit antigo.
+const PROPOSITOS: Record<string, string> = {
+};
+
 // Pastas de projeto no vault que não estão em 20 - PROJECTS.
 const EXTRA_VAULT: Record<string, { nome: string; folder: string }> = {
   'emannu-os': { nome: 'EMANNU OS', folder: '10 - EMANNU OS' },
@@ -40,7 +44,7 @@ export function buildProjectCards(store: Store, vault: Vault | null, legacy: Leg
     let c = cards.get(id);
     if (!c) {
       c = {
-        id, nome, isLegacy: false, logo: LOGOS[id] ?? null, badge: null, proposito: null, estadoAtual: null, legado: null, pasta: null,
+        id, nome, isLegacy: false, logo: LOGOS[id] ?? null, badge: null, proposito: PROPOSITOS[id] ?? null, estadoAtual: null, legado: null, pasta: null,
         vaultFolder: null, jobsAbertos: 0, aguardandoVoce: 0, entregas: [], midias: { total: 0, porTipo: {}, amostra: [] }, documentos: [],
       };
       cards.set(id, c);

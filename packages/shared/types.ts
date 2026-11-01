@@ -212,6 +212,24 @@ export interface NewJobInput {
   timeoutMin?: number;
 }
 
+// Um repositório do GitHub visto pelo EMANNU OS (só leitura, pelo gh com a sua conta).
+export interface GitHubView {
+  repo: string; // dono/nome
+  url: string;
+  papel: 'origem' | 'copia-publica';
+  privado: boolean;
+  branchPadrao: string;
+  ultimoPush: string | null;
+  ultimoCommit: { mensagem: string; data: string; url: string } | null;
+  prsAbertos: { numero: number; titulo: string; url: string; branch: string; rascunho: boolean }[];
+  // Último CI da branch principal e o último de qualquer branch (quando forem diferentes).
+  ci: { estado: 'ok' | 'falhou' | 'rodando' | 'cancelado' | 'outro'; branch: string; url: string; em: string; nome: string } | null;
+  ciOutro: { estado: 'ok' | 'falhou' | 'rodando' | 'cancelado' | 'outro'; branch: string; url: string; em: string; nome: string } | null;
+  // Só para o "origin": a pasta no PC.
+  local: { branch: string; alteracoes: number; aFrente: number | null; atras: number | null } | null;
+  erro: string | null;
+}
+
 // Card da aba Projetos: junta o cockpit antigo, o vault e o que roda no v3.
 export interface ProjectCard {
   id: string;
@@ -248,6 +266,10 @@ export interface ProjectCard {
     } | null;
     gerando: boolean;
   };
+  // Repositórios no GitHub (o próprio, pelo "origin", e a cópia pública limpa) e o estado local.
+  github?: GitHubView[];
+  // O GitHub não respondeu a tempo: a aba pede de novo em alguns segundos.
+  githubPendente?: boolean;
   // Só no card da Imigração Portugal: resumo do espaço próprio.
   imigracao?: {
     rota: string | null;

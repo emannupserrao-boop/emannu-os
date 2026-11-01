@@ -56,6 +56,15 @@ export const PROJECT_NOTES: Record<string, string> = {
 // Operação Receita: a equipe de especialistas (só leitura para o EMANNU OS).
 export const RECEITA_DIR = process.env.EMANNU_RECEITA_DIR ?? 'C:\\Users\\you\\Documents\\Operacao-Receita-2026';
 export const LEGACY_COCKPIT_DIR = process.env.EMANNU_LEGACY_DIR ?? 'C:\\Users\\you\\Documents\\Codex\\2026-10-17\\task-2\\cockpit-emannu-os';
+// Cópias públicas e limpas no GitHub (sem dados pessoais), além do "origin" de cada pasta.
+export const GITHUB_PUBLIC_COPIES: Record<string, string> = {
+  'emannu-os': 'emannupserrao-boop/emannu-os',
+  mirae: 'emannupserrao-boop/mirae-dota-coach',
+  'what-lies-btwn': 'emannupserrao-boop/what-lies-btwn-production-os',
+  'estacao-raiz-jogos': 'emannupserrao-boop/estacao-raiz',
+  'estacao-raiz': 'emannupserrao-boop/estacao-raiz',
+};
+
 // Aba Arquivos: pastas de música (WHAT LIES BTWN), além das pastas dos projetos, do vault e dos documentos.
 export const MUSIC_DIRS = (process.env.EMANNU_MUSIC_DIRS ?? 'D:\\Musicas;D:\\What Lies Btwn').split(';').map((s) => s.trim()).filter(Boolean);
 export const LEGACY_JOB_OFFERS = `${LEGACY_COCKPIT_DIR}\\JOB-OFFERS-20261021.json`;

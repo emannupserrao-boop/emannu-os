@@ -76,7 +76,7 @@ describe('cálculos', () => {
     aiJobs: null,
     apartamentos: null,
     arquivos: [],
-    user: { ...DEFAULT_USER, fimEmprego: '2026-11-30', orcamento: { ...DEFAULT_USER.orcamento, reservaLei: 50000, rescisaoLei: 10000, salarioPresencialEur: 1200, salarioEsposaEur: 870 } },
+    user: { ...DEFAULT_USER, fimEmprego: '2026-12-15', orcamento: { ...DEFAULT_USER.orcamento, reservaLei: 50000, rescisaoLei: 10000, salarioPresencialEur: 1200, salarioEsposaEur: 870 } },
     research: [],
     docsFolder: 'X',
     vaultFolder: 'Y',
@@ -95,8 +95,8 @@ describe('cálculos', () => {
 
   it('linha do tempo: fim do emprego + prazo de 90 dias', () => {
     const t = computeTimeline(state(), '2026-10-27');
-    expect(t[0]).toMatchObject({ data: '2026-11-30', tipo: 'critico', diasAte: 34 });
-    expect(t[1].data).toBe('2027-02-28');
+    expect(t[0]).toMatchObject({ data: '2026-12-15', tipo: 'critico', diasAte: 49 });
+    expect(t[1].data).toBe('2027-03-15');
   });
 
   it('fontes com mais de 30 dias ficam para rever', () => {

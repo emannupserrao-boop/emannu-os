@@ -654,7 +654,7 @@ html[data-vt='close']::view-transition-old(view) { display: none; }
 .tokline { display: flex; flex-wrap: wrap; gap: 4px 12px; margin: 6px 0 0; font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
 .htoday { margin-top: 8px; }
 .hagents { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-direction: column; }
-.hagents li { display: grid; grid-template-columns: auto auto 1fr auto; align-items: center; gap: 8px 10px; padding: 7px 0; border-top: 1px solid var(--line-soft); }
+.hagents li { display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; align-items: center; gap: 8px 10px; padding: 7px 0; border-top: 1px solid var(--line-soft); }
 .hagents li:first-child { border-top: 0; }
 .hagents li.on .hagent-name { color: var(--blue); }
 .hagent-name { font-weight: 590; white-space: nowrap; }
@@ -662,7 +662,8 @@ html[data-vt='close']::view-transition-old(view) { display: none; }
 .hnote { border-top: 1px solid var(--line-soft); padding-top: 10px; margin-top: 10px; }
 @media (max-width: 899px) {
   .ctx-label, .tokline, .ctx-chip { font-size: 14px; }
-  .hagents li { grid-template-columns: auto 1fr auto; }
+  .hagents li { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .hagent-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
   .hagent-role { grid-column: 2 / -1; grid-row: 2; white-space: normal; }
   .hagents li .ibadge { grid-row: 1; grid-column: 3; }
   .hrun-head { flex-wrap: wrap; }
@@ -1019,3 +1020,12 @@ body.has-player .toast { bottom: calc(100px + env(safe-area-inset-bottom)); }
   .arq-search input { min-height: 40px; }
   .arq-crumbs .btn, .arq-status .btn { min-height: 40px; }
 }
+
+/* GitHub nos cards de projeto */
+.gh-repo { padding: 8px 10px; margin: 6px 0; border: 1px solid var(--line-soft); border-radius: 10px; background: var(--surface-2); }
+.gh-line { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.gh-name { font-weight: 560; color: var(--ink); overflow-wrap: anywhere; margin-right: 2px; }
+a.ibadge { text-decoration: none; }
+.gh-local svg, .gh-prs svg { vertical-align: -2px; }
+.gh-prs { margin: 6px 0 0; }
+.gh-repo .hint { margin: 4px 0 0; overflow-wrap: anywhere; }

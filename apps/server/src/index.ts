@@ -29,6 +29,7 @@ import { wireNotifications } from './notifications.ts';
 import { git, isGitRepo } from './worktrees.ts';
 import { Vault } from './vault.ts';
 import { Library, findFfmpeg } from './arquivos.ts';
+import { GitHubStatus } from './github.ts';
 import type { LegacyImport } from './legacy.ts';
 
 const INBOX_INTERVAL_MS = 60_000;
@@ -113,7 +114,7 @@ const library = new Library({
   },
 });
 
-const app = await buildApp({ sched, auth, push, webDist: WEB_DIST, legacyDir: LEGACY_COCKPIT_DIR, library, logger: true });
+const app = await buildApp({ sched, auth, push, webDist: WEB_DIST, legacyDir: LEGACY_COCKPIT_DIR, library, github: new GitHubStatus(), logger: true });
 await app.listen({ host: HOST, port: PORT });
 console.log(`EMANNU OS v3 rodando em http://${HOST}:${PORT}${auth.isConfigured() ? '' : ' — abra no PC para definir o PIN'}`);
 sched.refreshAgents().catch((e) => console.error('Falha ao verificar agentes:', e));
@@ -134,6 +135,8 @@ history.cards = async () => {
   const cards = (await app.inject({ url: '/api/projetos', headers: { 'x-emannu-token': auth.adminToken } })).json() as any[];
   return cards.filter((c) => c.codigo?.total).map((c) => ({ id: c.id, nome: c.nome, dirs: history.dirsFor(c.id, c.pasta?.path ?? null), vaultFolder: c.vaultFolder }));
 };
+// CI dos projetos no GitHub: aviso no celular quando a branch principal falha.
+alerts.registerGitHub(sched.routines, async () => (await app.inject({ url: '/api/projetos?github=fresco', headers: { 'x-emannu-token': auth.adminToken } })).json() as any[]);
 // Rotinas (v3.1): vagas, leads, propostas, alerta legal e histórico. Única agenda do sistema.
 if (!process.env.EMANNU_NO_ROUTINES) {
   sched.routines.start();

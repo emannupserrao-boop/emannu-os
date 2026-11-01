@@ -9,6 +9,7 @@ import { registerRendaApi } from './renda/api.ts';
 import { registerChatApi } from './chatApi.ts';
 import { registerArquivosApi } from './arquivosApi.ts';
 import type { Library } from './arquivos.ts';
+import type { GitHubStatus } from './github.ts';
 import { HumanConfirm } from './renda/human.ts';
 import { Auth, parseCookies, type Device } from './auth.ts';
 import type { Push, PushSubscriptionJSON } from './push.ts';
@@ -41,7 +42,7 @@ function setTokenCookie(req: FastifyRequest, reply: FastifyReply, token: string 
   reply.header('Set-Cookie', `${COOKIE}=${value}; Path=/; HttpOnly; SameSite=Strict; Max-Age=${age}${secure ? '; Secure' : ''}`);
 }
 
-export async function buildApp(opts: { sched: Scheduler; auth: Auth; push: Push | null; webDist?: string | null; legacyDir?: string | null; library?: Library | null; logger?: boolean }) {
+export async function buildApp(opts: { sched: Scheduler; auth: Auth; push: Push | null; webDist?: string | null; legacyDir?: string | null; library?: Library | null; github?: GitHubStatus | null; logger?: boolean }) {
   const { sched, auth, push } = opts;
   const app = Fastify({ logger: opts.logger ? { level: 'warn' } : false });
   app.decorateRequest('device', null);
@@ -126,7 +127,7 @@ export async function buildApp(opts: { sched: Scheduler; auth: Auth; push: Push 
   });
 
   registerApi(app, sched);
-  registerProjectsApi(app, sched, opts.legacyDir ?? null);
+  registerProjectsApi(app, sched, opts.legacyDir ?? null, opts.github ?? null);
   // Uma única fila de confirmações humanas para renda, candidaturas e integrações.
   const human = new HumanConfirm();
   registerRendaApi(app, sched, human);

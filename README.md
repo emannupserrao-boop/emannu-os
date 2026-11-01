@@ -22,6 +22,7 @@ EMANNU OS is a self-hosted control panel that turns a single Windows PC into a s
 | **Routines engine** | One cron scheduler (with time-zone and DST handling, catch-up windows and claim/fence semantics on SQLite) drives research, lead scoring, proposals, summaries and weekly maintenance. |
 | **Chat tab** | One box to talk to Claude, Claude Code, Codex, GPT (Hermes) or a "Council" (two models answering independently, then a synthesis). *Converse* mode is read-only and resumes each agent's own session; *Execute* mode becomes a governed job. Live streaming over SSE, voice input on mobile, attachments. |
 | **Files tab** | Read-only media library over the PC's folders: music player that keeps playing across tabs (with lock-screen controls), photo albums with ffmpeg thumbnails, video and document viewer, downloads. Paths are confined to their roots (no `..`, junction or symlink escapes) and secret files are never listed or served. |
+| **GitHub awareness** | Each project card shows its GitHub repository read-only through the `gh` CLI: latest CI run on the default branch, open pull requests, and the local branch with uncommitted changes. A routine checks every 30 minutes and sends a push notification once per failed CI run on the default branch. |
 | **Game mode & GPU lock** | Detects when I'm gaming and defers GPU-heavy jobs; local models (LM Studio) share a GPU lock with priority for client work. |
 | **Mobile PWA** | Installable app with PIN + per-device tokens, Web Push notifications, offline snapshot, 44px touch targets and no horizontal scroll (checked by tests). |
 | **Obsidian integration** | Reads project notes from my vault, appends dated blocks and refreshes only its own marker-delimited sections — it never rewrites text written by hand. |
@@ -36,7 +37,7 @@ EMANNU OS is a self-hosted control panel that turns a single Windows PC into a s
 - **Server:** Node.js 24 running TypeScript directly, Fastify 5, built-in `node:sqlite`, Server-Sent Events, Web Push.
 - **Web:** React 19 + Vite 7 PWA, custom service worker, View Transitions.
 - **Agents:** Claude Code CLI, Codex CLI, Hermes Agent, OpenClaw (all through my own subscriptions — no paid API keys), LM Studio for local models.
-- **Tests:** 226 Vitest tests (server, scheduler, governance, security) and 13 Playwright end-to-end tests on an emulated Android phone and a 1440px desktop.
+- **Tests:** 234 Vitest tests (server, scheduler, governance, security) and 13 Playwright end-to-end tests on an emulated Android phone and a 1440px desktop.
 - **Infra:** Windows Task Scheduler autostart, Tailscale Serve (tailnet-only HTTPS), git worktrees.
 
 ## How I build it

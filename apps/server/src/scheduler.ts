@@ -10,7 +10,7 @@ import type { JobPatch, NewJobRow, Store } from './db.ts';
 import { adapters, type AgentAdapter, type Parsed } from './runners/adapters.ts';
 import { startProcess, type RunningProcess } from './runners/process.ts';
 import { UsageTracker, combineUsage, watchRollout, type UsageEvent } from './runners/usage.ts';
-import { findAgentExe, probeAgent, type ProbeResult } from './agents/discover.ts';
+import { findAgentExe, isNodeScript, probeAgent, type ProbeResult } from './agents/discover.ts';
 import { buildHarnesses, probeExtra, type ExtraProbe } from './agents/harness.ts';
 import { removeWorktree, resolveBase, worktreeDiff } from './worktrees.ts';
 import { AGENT_LIMITS, CHECKPOINT_MIN, DEFAULT_TIMEOUT_MIN, LONG_JOB_MIN, USAGE_PAUSE_MIN } from './config.ts';
@@ -447,8 +447,8 @@ export class Scheduler extends EventEmitter {
     this.emitAgents();
 
     act.proc = startProcess({
-      exe: exe.endsWith('.mjs') ? process.execPath : exe,
-      args: exe.endsWith('.mjs') ? [exe, ...args] : args,
+      exe: isNodeScript(exe) ? process.execPath : exe,
+      args: isNodeScript(exe) ? [exe, ...args] : args,
       cwd: place.cwd,
       stdin,
       env,

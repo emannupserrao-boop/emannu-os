@@ -12,6 +12,7 @@ import type { Scheduler } from './scheduler.ts';
 import { claudeAdapter, codexAdapter, type Parsed } from './runners/adapters.ts';
 import { hermesAdapter } from './runners/open-agents.ts';
 import { startProcess } from './runners/process.ts';
+import { isNodeScript } from './agents/discover.ts';
 import type { SlackBridge } from './slack.ts';
 
 export type ChatAgent = 'claude' | 'claude-code' | 'gpt' | 'codex' | 'rocky' | 'conselho';
@@ -238,8 +239,8 @@ export class Chats {
     let final: { ok: boolean; text: string } | null = null;
     return new Promise((resolve) => {
       const proc = startProcess({
-        exe: exe.endsWith('.mjs') ? process.execPath : exe,
-        args: exe.endsWith('.mjs') ? [exe, ...args] : args,
+        exe: isNodeScript(exe) ? process.execPath : exe,
+        args: isNodeScript(exe) ? [exe, ...args] : args,
         cwd,
         stdin: prompt,
         env,

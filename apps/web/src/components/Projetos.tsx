@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronRight, X } from 'lucide-react';
-import type { ClientConfig, Job, ProjectCard } from '../../../../packages/shared/types.ts';
+import { ChevronRight, GitBranch, GitPullRequest, X } from 'lucide-react';
+import type { ClientConfig, GitHubView, Job, ProjectCard } from '../../../../packages/shared/types.ts';
 import { actions, api, formatTime, obsidianLink } from '../api.ts';
 import { Skeleton } from '../motion.tsx';
 import { Md } from './Md.tsx';
@@ -169,6 +169,84 @@ function ImmigrationSummary({ p, onOpen }: { p: ProjectCard; onOpen(): void }) {
 
 const DOCS_COMPACT = 4;
 
+const CI_LABEL: Record<NonNullable<GitHubView['ci']>['estado'], [string, string]> = {
+  ok: ['CI passou', 'tone-ok'],
+  falhou: ['CI falhou', 'tone-bad'],
+  rodando: ['CI rodando', 'tone-warn'],
+  cancelado: ['CI cancelado', 'tone-neutral'],
+  outro: ['CI', 'tone-neutral'],
+};
+
+function CiBadge({ ci }: { ci: NonNullable<GitHubView['ci']> }) {
+  const [label, tone] = CI_LABEL[ci.estado];
+  return (
+    <a className={`ibadge ${tone}`} href={ci.url} target="_blank" rel="noreferrer" title={`${ci.nome} · ${ci.branch} · ${formatTime(ci.em)}`}>
+      {label} · {ci.branch}
+    </a>
+  );
+}
+
+// GitHub do projeto (só leitura): repositório, último CI, PRs abertos e a pasta local.
+function GitHubSection({ p, compact }: { p: ProjectCard; compact: boolean }) {
+  if (!p.github?.length) return null;
+  const list = compact ? p.github.filter((g) => g.papel === 'origem').concat(p.github.filter((g) => g.papel !== 'origem')).slice(0, 1) : p.github;
+  return (
+    <>
+      <h4>GitHub</h4>
+      {list.map((g) => (
+        <div key={g.repo + g.papel} className="gh-repo">
+          <div className="gh-line">
+            <a href={g.url} target="_blank" rel="noreferrer" className="gh-name">
+              {g.repo}
+            </a>
+            <span className={`ibadge ${g.privado ? 'tone-neutral' : 'tone-ok'}`}>{g.privado ? 'privado' : 'público'}</span>
+            {g.papel === 'copia-publica' && <span className="ibadge tone-neutral">cópia pública limpa</span>}
+            {g.ci && <CiBadge ci={g.ci} />}
+            {!compact && g.ciOutro && <CiBadge ci={g.ciOutro} />}
+          </div>
+          {g.erro ? (
+            <p className="hint">{g.erro}</p>
+          ) : (
+            <>
+              {g.local && (
+                <p className="hint gh-local">
+                  <GitBranch size={13} aria-hidden /> No PC: <b>{g.local.branch}</b>
+                  {g.local.alteracoes ? ` · ${g.local.alteracoes} arquivo(s) alterado(s) sem commit` : ' · tudo salvo'}
+                  {g.local.aFrente ? ` · ${g.local.aFrente} commit(s) a enviar` : ''}
+                  {g.local.atras ? ` · ${g.local.atras} commit(s) a trazer` : ''}
+                </p>
+              )}
+              {g.ultimoCommit && !compact && (
+                <p className="hint">
+                  Último commit em {g.branchPadrao}:{' '}
+                  <a href={g.ultimoCommit.url} target="_blank" rel="noreferrer">
+                    {g.ultimoCommit.mensagem}
+                  </a>{' '}
+                  · {formatTime(g.ultimoCommit.data)}
+                </p>
+              )}
+              {g.prsAbertos.length > 0 && (
+                <ul className="ilist gh-prs">
+                  {(compact ? g.prsAbertos.slice(0, 2) : g.prsAbertos).map((pr) => (
+                    <li key={pr.numero}>
+                      <GitPullRequest size={13} aria-hidden />{' '}
+                      <a href={pr.url} target="_blank" rel="noreferrer">
+                        #{pr.numero} {pr.titulo}
+                      </a>
+                      {pr.rascunho && <span className="hint"> · rascunho</span>}
+                    </li>
+                  ))}
+                </ul>
+              )}
+              {!g.prsAbertos.length && !compact && <p className="hint">Nenhum PR aberto.</p>}
+            </>
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
+
 function Card({ p, config, compact, onOpen, onNewObjective, onOpenImmigration, onRefresh, onError }: { p: ProjectCard; config: ClientConfig; compact: boolean; onOpen?(): void; onNewObjective(projectId: string): void; onOpenImmigration(): void; onRefresh(): void; onError(m: string): void }) {
   const [showLegacy, setShowLegacy] = useState(false);
   const docs = compact ? p.documentos.slice(0, DOCS_COMPACT) : p.documentos;
@@ -218,6 +296,8 @@ function Card({ p, config, compact, onOpen, onNewObjective, onOpenImmigration, o
       )}
 
       {p.imigracao && <ImmigrationSummary p={p} onOpen={onOpenImmigration} />}
+
+      <GitHubSection p={p} compact={compact} />
 
       <CodeHistory p={p} config={config} onError={onError} onRefresh={onRefresh} />
 
@@ -400,6 +480,24 @@ export function Projetos(props: { config: ClientConfig; version: string; jobs: J
   useEffect(() => {
     load();
   }, [props.version]);
+  // O GitHub demorou: busca de novo em alguns segundos (o servidor continua buscando em segundo plano).
+  // Se a nova busca falhar (rede), tenta outra vez; no máximo 10 tentativas seguidas.
+  const pendente = !!cards?.some((c) => c.githubPendente);
+  const [tentativas, setTentativas] = useState(0);
+  useEffect(() => {
+    if (!pendente) {
+      if (tentativas) setTentativas(0);
+      return;
+    }
+    if (tentativas >= 10) return;
+    const t = setTimeout(() => {
+      api<ProjectCard[]>('/api/projetos')
+        .then(setCards)
+        .catch(() => {})
+        .finally(() => setTentativas((n) => n + 1));
+    }, 7000);
+    return () => clearTimeout(t);
+  }, [pendente, cards, tentativas]);
   if (!cards) return <Skeleton cards={4} label="Carregando projetos" />;
   const opened = cards.find((c) => c.id === openId) ?? null;
   const common = { config: props.config, onNewObjective: props.onNewObjective, onOpenImmigration: props.onOpenImmigration, onRefresh: load, onError: props.onError };

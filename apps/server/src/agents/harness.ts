@@ -6,7 +6,7 @@ import { homedir } from 'node:os';
 import { join } from 'node:path';
 import type { AgentState, HarnessAgent, HarnessView, JobKind, Project } from '../../../../packages/shared/types.ts';
 import type { RoutineView } from '../../../../packages/shared/renda.ts';
-import { findOpenClawExe, run, which } from './discover.ts';
+import { findOpenClawExe, isNodeScript, run, which } from './discover.ts';
 import { RECEITA_AGENTS } from './receita.ts';
 
 export interface ExtraProbe {
@@ -33,7 +33,7 @@ export function findOpenClaw(): string | null {
 export async function probeExtra(id: 'hermes' | 'openclaw'): Promise<ExtraProbe> {
   const exe = id === 'hermes' ? findHermes() : findOpenClaw();
   if (!exe) return { installed: false, exe: null, version: null, agents: [] };
-  const call = (args: string[]) => (exe.endsWith('.mjs') ? run(process.execPath, [exe, ...args]) : run(exe, args));
+  const call = (args: string[]) => (isNodeScript(exe) ? run(process.execPath, [exe, ...args]) : run(exe, args));
   const v = await call(['--version']);
   const version = /(\d{4}\.\d+\.\d+[\w.-]*|\d+\.\d+\.\d+)/.exec(v.out)?.[1] ?? null;
   let agents: HarnessAgent[] = [];

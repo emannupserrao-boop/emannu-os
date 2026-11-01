@@ -8,6 +8,8 @@ import type { Scheduler } from './scheduler.ts';
 import { buildProjectCards } from './projects.ts';
 import { importLegacy, type LegacyFile, type LegacyImport } from './legacy.ts';
 import { sessionSummary } from './history.ts';
+import type { GitHubStatus, RepoTarget } from './github.ts';
+import { GITHUB_PUBLIC_COPIES } from './config.ts';
 import type { ProjectCard } from '../../../packages/shared/types.ts';
 import { DOC_DONE, allSources, computeTimeline, isStale, type ImmigrationState } from '../../../packages/shared/immigration.ts';
 
@@ -59,7 +61,7 @@ const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8', '.pdf': 'application/pdf',
 };
 
-export function registerProjectsApi(app: FastifyInstance, sched: Scheduler, legacyDir: string | null) {
+export function registerProjectsApi(app: FastifyInstance, sched: Scheduler, legacyDir: string | null, github: GitHubStatus | null = null) {
   let legacy: LegacyImport | null = legacyDir ? importLegacy(sched.store, legacyDir) : sched.store.kvGet('legado');
   let index = new Map<string, LegacyFile>();
   const reindex = () => {
@@ -67,7 +69,7 @@ export function registerProjectsApi(app: FastifyInstance, sched: Scheduler, lega
   };
   reindex();
 
-  const cards = async (): Promise<ProjectCard[]> => {
+  const cards = async (opts: { githubFresco?: boolean } = {}): Promise<ProjectCard[]> => {
     const list = buildProjectCards(sched.store, sched.vault, legacy);
     const h = sched.history;
     if (h) {
@@ -76,12 +78,55 @@ export function registerProjectsApi(app: FastifyInstance, sched: Scheduler, lega
         c.codigo = { total: sessions.length, sessoes: sessions.slice(0, 8).map(sessionSummary), historico: h.get(c.id), gerando: h.pending(c.id) };
       }
     }
+    if (github) await attachGitHub(list, !!opts.githubFresco);
     const imm = sched.immigration?.state();
     if (imm) list.unshift(immigrationCard(imm));
     return list;
   };
 
-  app.get('/api/projetos', async () => cards());
+  // GitHub de cada projeto: o "origin" da pasta e a cópia pública. Para a aba, espera no máximo
+  // 6 s: o que não chegou marca o card como "githubPendente" e a aba pede de novo. A rotina de
+  // CI pede dados frescos (sem cache) e espera a resposta inteira (cada comando do gh tem 20 s).
+  const attachGitHub = async (list: ProjectCard[], force = false) => {
+    const targets: RepoTarget[] = [];
+    await Promise.all(
+      list.map(async (c) => {
+        const path = c.pasta?.isGit ? c.pasta.path : null;
+        const origin = path ? await github!.originOf(path) : null;
+        if (origin) targets.push({ projectId: c.id, repo: origin, papel: 'origem', path });
+        const copy = GITHUB_PUBLIC_COPIES[c.id] ?? (c.pasta ? GITHUB_PUBLIC_COPIES[c.pasta.projectId] : undefined);
+        if (copy && copy !== origin) targets.push({ projectId: c.id, repo: copy, papel: 'copia-publica', path: null });
+      }),
+    );
+    const views = await Promise.all(
+      targets.map((t) => {
+        const fetched = github!.view(t, force).then((v) => ({ t, v }));
+        if (force) return fetched;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const timeout = new Promise<null>((r) => (timer = setTimeout(() => r(null), 6000)));
+        return Promise.race([fetched, timeout]).then((x) => {
+          clearTimeout(timer);
+          if (!x) list.find((p) => p.id === t.projectId)!.githubPendente = true;
+          return x;
+        });
+      }),
+    );
+    for (const x of views) {
+      if (!x) continue;
+      const c = list.find((p) => p.id === x.t.projectId)!;
+      (c.github ??= []).push(x.v);
+    }
+    for (const c of list) c.github?.sort((a, b) => (a.papel === b.papel ? 0 : a.papel === 'origem' ? -1 : 1));
+  };
+
+  app.get<{ Querystring: { github?: string } }>('/api/projetos', async (req) => cards({ githubFresco: req.query.github === 'fresco' }));
+
+  // Busca de novo o GitHub de todos os projetos (sem esperar os 10 min do cache).
+  app.post('/api/projetos/github/atualizar', async () => {
+    if (!github) throw new Error('GitHub desativado');
+    github.clear();
+    return { ok: true };
+  });
 
   // Gera (ou refaz) o resumo do que já foi feito no Claude Code para um projeto.
   app.post<{ Params: { id: string } }>('/api/projetos/:id/historico', async (req) => {
